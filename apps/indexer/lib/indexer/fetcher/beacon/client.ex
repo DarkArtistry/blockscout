@@ -89,6 +89,38 @@ defmodule Indexer.Fetcher.Beacon.Client do
     http_get_request(pending_deposits_url(slot))
   end
 
+  @doc """
+  Fetches genesis information from the beacon chain.
+  """
+  @spec get_genesis :: {:error, any()} | {:ok, any()}
+  def get_genesis do
+    http_get_request(genesis_url())
+  end
+
+  @doc """
+  Fetches all validators for a given state (default: "head").
+  """
+  @spec get_validators(String.t()) :: {:error, any()} | {:ok, any()}
+  def get_validators(state_id \\ "head") do
+    http_get_request(validators_url(state_id))
+  end
+
+  @doc """
+  Fetches a specific validator by index or pubkey.
+  """
+  @spec get_validator(String.t(), String.t() | integer()) :: {:error, any()} | {:ok, any()}
+  def get_validator(state_id, validator_id) do
+    http_get_request(validator_url(state_id, validator_id))
+  end
+
+  @doc """
+  Fetches validator balances for a given state.
+  """
+  @spec get_validator_balances(String.t()) :: {:error, any()} | {:ok, any()}
+  def get_validator_balances(state_id \\ "head") do
+    http_get_request(validator_balances_url(state_id))
+  end
+
   def blob_sidecars_url(slot), do: "#{base_url()}" <> "/eth/v1/beacon/blob_sidecars/" <> to_string(slot)
 
   def header_url(slot), do: "#{base_url()}" <> "/eth/v1/beacon/headers/" <> to_string(slot)
@@ -96,6 +128,14 @@ defmodule Indexer.Fetcher.Beacon.Client do
   defp pending_deposits_url(epoch), do: "#{base_url()}/eth/v1/beacon/states/#{epoch}/pending_deposits"
 
   defp spec_url, do: "#{base_url()}/eth/v1/config/spec"
+
+  defp genesis_url, do: "#{base_url()}/eth/v1/beacon/genesis"
+
+  defp validators_url(state_id), do: "#{base_url()}/eth/v1/beacon/states/#{state_id}/validators"
+
+  defp validator_url(state_id, validator_id), do: "#{base_url()}/eth/v1/beacon/states/#{state_id}/validators/#{validator_id}"
+
+  defp validator_balances_url(state_id), do: "#{base_url()}/eth/v1/beacon/states/#{state_id}/validator_balances"
 
   def base_url do
     Application.get_env(:indexer, Indexer.Fetcher.Beacon)[:beacon_rpc]

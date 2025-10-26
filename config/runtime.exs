@@ -1419,6 +1419,9 @@ config :indexer, Indexer.Fetcher.RootstockData,
 
 config :indexer, Indexer.Fetcher.Beacon, beacon_rpc: System.get_env("INDEXER_BEACON_RPC_URL") || "http://localhost:5052"
 
+config :indexer, Indexer.Fetcher.Beacon.ValidatorFetcher,
+  enabled: ConfigHelper.parse_bool_env_var("INDEXER_BEACON_VALIDATOR_FETCHER_ENABLED", "true")
+
 config :indexer, Indexer.Fetcher.Beacon.Blob.Supervisor,
   disabled?:
     ConfigHelper.chain_type() != :ethereum ||

@@ -444,6 +444,13 @@ defmodule BlockScoutWeb.Routers.ApiRouter do
           get("/counters", V2.ValidatorController, :blackfort_validators_counters)
         end
       end
+
+      scope "/beacon" do
+        get("/", V2.ValidatorController, :beacon_validators_list)
+        get("/counters", V2.ValidatorController, :beacon_validators_counters)
+        get("/slashed", V2.ValidatorController, :beacon_slashed_validators)
+        get("/:index", V2.ValidatorController, :beacon_validator)
+      end
     end
 
     scope "/zksync" do

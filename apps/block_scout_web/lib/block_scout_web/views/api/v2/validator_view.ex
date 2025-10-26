@@ -30,6 +30,25 @@ defmodule BlockScoutWeb.API.V2.ValidatorView do
     })
   end
 
+  def render("beacon_validators.json", %{validators: validators, next_page_params: next_page_params}) do
+    %{"items" => Enum.map(validators, &prepare_beacon_validator(&1)), "next_page_params" => next_page_params}
+  end
+
+  def render("beacon_validator.json", %{
+        validator: validator,
+        balances: balances,
+        withdrawals: withdrawals,
+        slashings: slashings
+      }) do
+    validator
+    |> prepare_beacon_validator()
+    |> Map.merge(%{
+      "balance_history" => Enum.map(balances, &prepare_beacon_balance(&1)),
+      "withdrawals" => Enum.map(withdrawals, &prepare_beacon_withdrawal(&1)),
+      "slashings" => Enum.map(slashings, &prepare_beacon_slashing(&1))
+    })
+  end
+
   defp prepare_stability_validator(validator) do
     %{
       "address" => Helper.address_with_info(nil, validator.address, validator.address_hash, true),
@@ -59,6 +78,52 @@ defmodule BlockScoutWeb.API.V2.ValidatorView do
       "bls_public_key" => validator.bls_public_key,
       "index" => validator.index,
       "balance" => to_string(validator.balance)
+    }
+  end
+
+  defp prepare_beacon_validator(validator) do
+    %{
+      "index" => validator.index,
+      "pubkey" => validator.pubkey,
+      "withdrawal_credentials" => validator.withdrawal_credentials,
+      "effective_balance" => to_string(validator.effective_balance || 0),
+      "slashed" => validator.slashed,
+      "activation_eligibility_epoch" => validator.activation_eligibility_epoch,
+      "activation_epoch" => validator.activation_epoch,
+      "exit_epoch" => validator.exit_epoch,
+      "withdrawable_epoch" => validator.withdrawable_epoch,
+      "status" => validator.status,
+      "last_attestation_slot" => validator.last_attestation_slot
+    }
+  end
+
+  defp prepare_beacon_balance(balance) do
+    %{
+      "epoch" => balance.epoch,
+      "balance" => to_string(balance.balance),
+      "effective_balance" => to_string(balance.effective_balance)
+    }
+  end
+
+  defp prepare_beacon_withdrawal(withdrawal) do
+    %{
+      "index" => withdrawal.index,
+      "validator_index" => withdrawal.validator_index,
+      "address" => to_string(withdrawal.address),
+      "amount" => to_string(withdrawal.amount),
+      "slot" => withdrawal.slot,
+      "epoch" => withdrawal.epoch
+    }
+  end
+
+  defp prepare_beacon_slashing(slashing) do
+    %{
+      "slot" => slashing.slot,
+      "epoch" => slashing.epoch,
+      "slashed_validator_index" => slashing.slashed_validator_index,
+      "slasher_validator_index" => slashing.slasher_validator_index,
+      "reason" => slashing.reason,
+      "details" => slashing.details
     }
   end
 end

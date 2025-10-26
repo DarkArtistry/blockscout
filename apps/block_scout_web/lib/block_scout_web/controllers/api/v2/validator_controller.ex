@@ -4,6 +4,7 @@ defmodule BlockScoutWeb.API.V2.ValidatorController do
   import Explorer.PagingOptions, only: [default_paging_options: 0]
 
   alias BlockScoutWeb.API.V2.ApiView
+  alias Explorer.Chain.Beacon.{Validator, ValidatorBalance, Withdrawal, Slashing}
   alias Explorer.Chain.Blackfort.Validator, as: ValidatorBlackfort
   alias Explorer.Chain.Cache.Counters.{Blackfort, Stability}
   alias Explorer.Chain.Stability.Validator, as: ValidatorStability
@@ -210,6 +211,104 @@ defmodule BlockScoutWeb.API.V2.ValidatorController do
 
       error ->
         error
+    end
+  end
+
+  @doc """
+  Function to handle GET requests to `/api/v2/validators/beacon` endpoint.
+  """
+  @spec beacon_validators_list(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def beacon_validators_list(conn, params) do
+    filter = parse_beacon_filter(params)
+
+    options =
+      @api_true
+      |> Keyword.merge(paging_options(params))
+      |> Keyword.merge(filter: filter)
+
+    {validators, next_page} = options |> Validator.all() |> split_list_by_page()
+
+    next_page_params =
+      next_page_params(next_page, validators, params, fn %Validator{index: index} ->
+        %{"index" => index}
+      end)
+
+    conn
+    |> render(:beacon_validators, %{validators: validators, next_page_params: next_page_params})
+  end
+
+  @doc """
+  Function to handle GET requests to `/api/v2/validators/beacon/counters` endpoint.
+  """
+  @spec beacon_validators_counters(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def beacon_validators_counters(conn, _params) do
+    total_count = Validator.total_count(@api_true)
+    status_counts = Validator.count_by_status(@api_true)
+
+    conn
+    |> json(%{
+      total: total_count,
+      active_ongoing: Map.get(status_counts, "active_ongoing", 0),
+      pending:
+        Map.get(status_counts, "pending_initialized", 0) + Map.get(status_counts, "pending_queued", 0),
+      exited:
+        Map.get(status_counts, "exited_unslashed", 0) + Map.get(status_counts, "exited_slashed", 0),
+      slashed: Map.get(status_counts, "active_slashed", 0) + Map.get(status_counts, "exited_slashed", 0)
+    })
+  end
+
+  @doc """
+  Function to handle GET requests to `/api/v2/validators/beacon/:index` endpoint.
+  """
+  @spec beacon_validator(Plug.Conn.t(), map()) :: Plug.Conn.t() | {:error, :not_found}
+  def beacon_validator(conn, %{"index" => index_string}) do
+    with {index, ""} <- Integer.parse(index_string),
+         validator when not is_nil(validator) <- Validator.by_index(index, @api_true) do
+      # Get balance history
+      balances = ValidatorBalance.by_validator_index(index, @api_true ++ [paging_options: %{page_size: 30}])
+
+      # Get withdrawals
+      withdrawals = Withdrawal.by_validator_index(index, @api_true ++ [paging_options: %{page_size: 10}])
+
+      # Get slashings
+      slashings = Slashing.by_slashed_validator(index, @api_true ++ [paging_options: %{page_size: 10}])
+
+      render(conn, :beacon_validator, %{
+        validator: validator,
+        balances: balances,
+        withdrawals: withdrawals,
+        slashings: slashings
+      })
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Function to handle GET requests to `/api/v2/validators/beacon/slashed` endpoint.
+  """
+  @spec beacon_slashed_validators(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def beacon_slashed_validators(conn, params) do
+    options =
+      @api_true
+      |> Keyword.merge(paging_options(params))
+
+    {validators, next_page} = options |> Validator.slashed() |> split_list_by_page()
+
+    next_page_params =
+      next_page_params(next_page, validators, params, fn %Validator{index: index} ->
+        %{"index" => index}
+      end)
+
+    conn
+    |> render(:beacon_validators, %{validators: validators, next_page_params: next_page_params})
+  end
+
+  defp parse_beacon_filter(params) do
+    case params do
+      %{"status" => status} when is_binary(status) -> %{status: status}
+      %{"status" => statuses} when is_list(statuses) -> %{status: statuses}
+      _ -> %{}
     end
   end
 end

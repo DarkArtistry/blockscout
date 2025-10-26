@@ -265,6 +265,7 @@ defmodule Indexer.Supervisor do
         {Indexer.Fetcher.Beacon.Blob.Supervisor, [[memory_monitor: memory_monitor]]},
         {Indexer.Fetcher.Beacon.Deposit.Supervisor, []},
         {Indexer.Fetcher.Beacon.Deposit.Status.Supervisor, []},
+        configure(Indexer.Fetcher.Beacon.ValidatorFetcher, [[]]),
         {Indexer.Fetcher.SignedAuthorizationStatus.Supervisor,
          [[json_rpc_named_arguments: json_rpc_named_arguments, memory_monitor: memory_monitor]]},
 

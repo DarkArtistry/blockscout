@@ -26,18 +26,16 @@ services:
     extends:
       file: ./services/backend.yml
       service: backend
-    build:
-      context: ..
-      dockerfile: ./docker/Dockerfile
-      args:
-        RELEASE_VERSION: 9.0.2
+    image: roax/blockscout:validator
+    pull_policy: never
     links:
       - db:database
     environment:
-        ETHEREUM_JSONRPC_HTTP_URL: http://host.docker.internal:8545/
-        ETHEREUM_JSONRPC_TRACE_URL: http://host.docker.internal:8545/
-        ETHEREUM_JSONRPC_WS_URL: ws://host.docker.internal:8545/
-        CHAIN_ID: '1337'
+        ETHEREUM_JSONRPC_HTTP_URL: https://devrpc.roax.network
+        ETHEREUM_JSONRPC_TRACE_URL: https://devrpc.roax.network
+        ETHEREUM_JSONRPC_WS_URL: wss://devrpc.roax.network
+        CHAIN_ID: '135'
+        INDEXER_BEACON_RPC_URL: https://devbeacon.roax.network
 
   nft_media_handler:
     depends_on:
